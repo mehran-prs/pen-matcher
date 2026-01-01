@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pro Pen Matcher</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#007bff">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Natural Ink Matcher - Themes</title>
+
     <style>
-        /* --- Theme Variables --- */
         :root {
             --bg-color: #ffffff;
             --toolbar-bg: #ffffff;
@@ -56,11 +56,11 @@
         #refHeader { height: 20px; background: var(--ref-border); color: #fff; font-size: 10px; text-align: center; line-height: 20px; cursor: move; }
         #refCanvas { display: block; width: 100%; background: var(--ref-bg); }
 
-        /* UI Styling */
         input[type="number"] { width: 32px; border: 1px solid var(--toolbar-border); background: var(--button-bg); color: var(--text-color); border-radius: 4px; padding: 5px; text-align: center; }
         button { padding: 6px 14px; font-weight: bold; border-radius: 20px; border: none; cursor: pointer; background: var(--button-bg); color: var(--text-color); }
         .btn-match { background: #007bff; color: white; }
         .theme-toggle { font-size: 18px; padding: 4px 8px; background: transparent; }
+        label { font-size: 12px; font-weight: bold; cursor: pointer; user-select: none; }
     </style>
 </head>
 <body>
@@ -68,10 +68,13 @@
 <div class="toolbar">
     <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">🌓</button>
     <div style="display:flex; align-items:center; gap:8px;">
-        <input type="number" id="lineCount" value="3" min="1" max="10">
-        <input type="checkbox" id="allowCurves"> <label for="allowCurves" style="font-size:12px; font-weight:bold;">Curves</label>
+        <input type="number" id="lineCount" min="1" max="10" onchange="saveConfigs()">
+        <div style="display:flex; align-items:center; gap:4px;">
+            <input type="checkbox" id="allowCurves" onchange="saveConfigs()">
+            <label for="allowCurves">Curves</label>
+        </div>
     </div>
-    <button class="btn-new" onclick="startNewGame()">NEW</button>
+    <button onclick="startNewGame()">NEW</button>
     <button class="btn-match" onclick="showMatch()">MATCH</button>
 </div>
 
@@ -88,10 +91,28 @@
     const drawCtx = drawCanvas.getContext('2d');
     const refCtx = refCanvas.getContext('2d');
     const floatingRef = document.getElementById('floatingRef');
+    const countInput = document.getElementById('lineCount');
+    const curveCheckbox = document.getElementById('allowCurves');
 
     let targetLines = [];
     let isDrawing = false;
     let points = [];
+
+    // --- Persistent Configurations ---
+    function loadConfigs() {
+        // Load Line Count (Default to 3)
+        const savedCount = localStorage.getItem('pm-line-count');
+        countInput.value = savedCount !== null ? savedCount : 3;
+
+        // Load Curves Preference (Default to false)
+        const savedCurves = localStorage.getItem('pm-allow-curves');
+        curveCheckbox.checked = savedCurves === 'true';
+    }
+
+    function saveConfigs() {
+        localStorage.setItem('pm-line-count', countInput.value);
+        localStorage.setItem('pm-allow-curves', curveCheckbox.checked);
+    }
 
     // --- Theme Logic ---
     function initTheme() {
@@ -108,11 +129,8 @@
         const target = current === 'dark' ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', target);
         localStorage.setItem('user-theme', target);
-        // Refresh canvases to match new theme colors
         startNewGame();
     }
-
-    initTheme();
 
     // --- Drawing Logic ---
     function syncLayout() {
@@ -125,7 +143,6 @@
     }
 
     window.addEventListener('resize', syncLayout);
-    syncLayout();
 
     function isPen(e) { return e.pointerType === 'pen'; }
 
@@ -133,8 +150,6 @@
         if (!isPen(e)) return;
         isDrawing = true;
         points = [{ x: e.clientX, y: e.clientY }];
-
-        const theme = document.documentElement.getAttribute('data-theme');
         drawCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--ink-color').trim();
         drawCtx.lineWidth = 3;
         drawCtx.lineCap = 'round';
@@ -159,7 +174,7 @@
 
     drawCanvas.onpointerup = () => { isDrawing = false; points = []; };
 
-    // --- Core Matcher Logic ---
+    // --- Game Core ---
     function renderLine(ctx, p, color, width, dash = []) {
         ctx.beginPath();
         ctx.setLineDash(dash);
@@ -179,8 +194,8 @@
         refCtx.clearRect(0, 0, refCanvas.width, refCanvas.height);
         syncLayout();
 
-        const n = document.getElementById('lineCount').value;
-        const allowCurves = document.getElementById('allowCurves').checked;
+        const n = countInput.value;
+        const allowCurves = curveCheckbox.checked;
         const theme = document.documentElement.getAttribute('data-theme');
         const refInk = theme === 'dark' ? '#eeeeee' : '#333333';
 
@@ -213,7 +228,7 @@
         });
     }
 
-    // Draggable Window
+    // Draggable Ref Window
     let isDrag = false, offset = {x:0, y:0};
     floatingRef.onpointerdown = (e) => {
         isDrag = true; offset.x = e.clientX - floatingRef.offsetLeft;
@@ -229,11 +244,15 @@
     };
     floatingRef.onpointerup = () => isDrag = false;
 
+    // --- Initialization ---
+    initTheme();
+    loadConfigs();
+    syncLayout();
     startNewGame();
 
+    // Register Service Worker
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js')
-            .then(() => console.log("Service Worker Registered"));
+        navigator.serviceWorker.register('./sw.js').then(() => console.log("PWA Active"));
     }
 </script>
 </body>
