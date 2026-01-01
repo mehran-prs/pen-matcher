@@ -3,77 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pen Matcher</title>
+    <title>Pen-Only Matcher</title>
     <style>
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
-            overflow: hidden; font-family: sans-serif; background: #fafafa;
-            touch-action: none; /* Prevents scrolling while drawing */
+            overflow: hidden; font-family: -apple-system, sans-serif;
+            background: #fff; touch-action: none;
         }
 
-        /* Top Control Bar */
+        /* Minimalist Toolbar */
         .toolbar {
             position: fixed; top: 0; left: 0; width: 100%; height: 50px;
-            background: rgba(255, 255, 255, 0.9); border-bottom: 1px solid #ddd;
-            display: flex; align-items: center; justify-content: center; gap: 10px;
-            z-index: 100; padding: 0 10px; box-sizing: border-box;
+            background: rgba(255, 255, 255, 0.9); border-bottom: 1px solid #eee;
+            display: flex; align-items: center; justify-content: center; gap: 20px;
+            z-index: 1000;
         }
 
-        /* Main Drawing Canvas */
-        #drawCanvas {
-            position: absolute; top: 0; left: 0;
-            width: 100vw; height: 100vh; display: block;
-        }
+        #drawCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; }
 
-        /* Floating Moveable Reference Canvas */
+        /* Floating Reference */
         #floatingRef {
-            position: absolute; top: 70px; right: 20px;
-            width: 160px; height: 130px;
-            background: white; border: 2px solid #333;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-            border-radius: 8px; z-index: 200; cursor: move;
-            display: flex; flex-direction: column;
+            position: absolute; top: 65px; right: 15px;
+            width: 130px; background: white; border: 1.5px solid #000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-radius: 4px; z-index: 2000;
         }
         #refHeader {
-            height: 20px; background: #333; color: white;
-            font-size: 10px; display: flex; align-items: center;
-            justify-content: center; border-radius: 5px 5px 0 0;
+            height: 18px; background: #000; color: #fff; font-size: 9px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: move; text-transform: uppercase;
         }
-        #refCanvas { background: #fff; width: 160px; height: 110px; border-radius: 0 0 8px 8px; }
+        #refCanvas { display: block; background: #fff; width: 100%; }
 
-        /* UI Elements */
-        input[type="number"] { width: 40px; border: 1px solid #ccc; border-radius: 4px; padding: 5px; }
+        /* UI Styling */
+        .input-wrap { display: flex; align-items: center; gap: 8px; border-right: 1px solid #eee; padding-right: 15px; }
+        input[type="number"] { width: 35px; border: 1px solid #ddd; border-radius: 4px; padding: 4px; font-size: 14px; }
         button {
-            padding: 8px 12px; font-size: 12px; font-weight: bold;
-            border: none; border-radius: 4px; cursor: pointer;
+            padding: 8px 20px; font-size: 13px; font-weight: 600; border-radius: 20px;
+            border: none; cursor: pointer; transition: all 0.2s;
         }
-        .btn-gen { background: #007bff; color: white; }
-        .btn-match { background: #28a745; color: white; }
-        .btn-reset { background: #dc3545; color: white; }
-        #scorePop {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            font-size: 1.5rem; font-weight: bold; color: #007bff;
-            background: white; padding: 5px 20px; border-radius: 20px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 100;
-        }
+        .btn-new { background: #f0f0f0; color: #333; }
+        .btn-match { background: #007bff; color: white; }
+        #scoreDisplay { font-weight: bold; color: #007bff; font-size: 18px; min-width: 50px; }
+
+        /* Pen-only indicator */
+        .mode-hint { position: fixed; bottom: 10px; right: 10px; font-size: 10px; color: #ccc; z-index: 50; }
     </style>
 </head>
 <body>
 
 <div class="toolbar">
-    <input type="number" id="lineCount" value="3" min="1" max="10">
-    <button class="btn-gen" onclick="generateLines()">New</button>
-    <button class="btn-match" onclick="checkMatch()">Match</button>
-    <button class="btn-reset" onclick="resetAll()">Clear</button>
-    <div id="scorePop">Score: --</div>
+    <div class="input-wrap">
+        <input type="number" id="lineCount" value="3" min="1" max="10">
+        <button class="btn-new" onclick="startNewGame()">NEW</button>
+    </div>
+    <button class="btn-match" onclick="checkMatch()">MATCH</button>
+    <div id="scoreDisplay">--%</div>
 </div>
 
 <canvas id="drawCanvas"></canvas>
 
 <div id="floatingRef">
-    <div id="refHeader">DRAG ME</div>
-    <canvas id="refCanvas" width="160" height="110"></canvas>
+    <div id="refHeader">Move Window</div>
+    <canvas id="refCanvas"></canvas>
 </div>
+
+<div class="mode-hint">Pen Input Only</div>
 
 <script>
     const drawCanvas = document.getElementById('drawCanvas');
@@ -86,66 +80,73 @@
     let userLines = [];
     let isDrawing = false;
     let startPos = { x: 0, y: 0 };
-    let currentLine = null; // For real-time drawing feedback
 
-    // Handle Canvas Sizing
-    function resize() {
+    function syncLayout() {
         drawCanvas.width = window.innerWidth;
         drawCanvas.height = window.innerHeight;
+        const screenRatio = window.innerHeight / window.innerWidth;
+        const refWidth = 130;
+        refCanvas.width = refWidth;
+        refCanvas.height = refWidth * screenRatio;
     }
-    window.addEventListener('resize', resize);
-    resize();
 
-    // 1. Floating Window Logic (Draggable)
-    let isDragging = false;
+    window.addEventListener('resize', () => {
+        syncLayout();
+        renderUserLines();
+    });
+
+    // REJECTION LOGIC: Check if the pointer is a pen
+    function isPen(e) {
+        // pointerType can be 'mouse', 'pen', or 'touch'
+        return e.pointerType === 'pen';
+    }
+
+    function getPos(e) {
+        const rect = drawCanvas.getBoundingClientRect();
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+
+    // --- Dragging Window (Allows touch/mouse so you can move it) ---
+    let isDraggingRef = false;
     let dragOffset = { x: 0, y: 0 };
 
     floatingRef.onpointerdown = (e) => {
-        if(e.target.id === "refHeader" || e.target.id === "refCanvas") {
-            isDragging = true;
-            dragOffset.x = e.clientX - floatingRef.offsetLeft;
-            dragOffset.y = e.clientY - floatingRef.offsetTop;
-            floatingRef.setPointerCapture(e.pointerId);
-        }
+        isDraggingRef = true;
+        dragOffset.x = e.clientX - floatingRef.offsetLeft;
+        dragOffset.y = e.clientY - floatingRef.offsetTop;
+        floatingRef.setPointerCapture(e.pointerId);
+        e.stopPropagation();
     };
-
     floatingRef.onpointermove = (e) => {
-        if (!isDragging) return;
+        if (!isDraggingRef) return;
         floatingRef.style.left = (e.clientX - dragOffset.x) + 'px';
         floatingRef.style.top = (e.clientY - dragOffset.y) + 'px';
-        floatingRef.style.right = 'auto'; // Disable the initial 'right' anchor
+        floatingRef.style.right = 'auto';
     };
+    floatingRef.onpointerup = () => isDraggingRef = false;
 
-    floatingRef.onpointerup = () => isDragging = false;
-
-    // 2. Drawing Logic (Tablet Optimized)
+    // --- Drawing Logic (STRICT PEN ONLY) ---
     drawCanvas.onpointerdown = (e) => {
-        if (isDragging) return;
+        if (!isPen(e) || isDraggingRef) return;
         isDrawing = true;
-        const rect = drawCanvas.getBoundingClientRect();
-        startPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        startPos = getPos(e);
     };
 
     drawCanvas.onpointermove = (e) => {
-        if (!isDrawing) return;
-        const rect = drawCanvas.getBoundingClientRect();
-        const currentPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-
-        renderEverything(); // Clear and redraw
-        // Draw a temporary line for visual feedback
-        drawLine(drawCtx, {x1: startPos.x, y1: startPos.y, x2: currentPos.x, y2: currentPos.y}, '#007bff', 3);
+        if (!isDrawing || !isPen(e)) return;
+        renderUserLines();
+        drawSingleLine(drawCtx, {x1: startPos.x, y1: startPos.y, x2: getPos(e).x, y2: getPos(e).y}, '#007bff', 2.5);
     };
 
     drawCanvas.onpointerup = (e) => {
-        if (!isDrawing) return;
-        const rect = drawCanvas.getBoundingClientRect();
-        const endPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        if (!isDrawing || !isPen(e)) return;
+        const endPos = getPos(e);
         userLines.push({ x1: startPos.x, y1: startPos.y, x2: endPos.x, y2: endPos.y });
         isDrawing = false;
-        renderEverything();
+        renderUserLines();
     };
 
-    function drawLine(ctx, line, color, width, dash = []) {
+    function drawSingleLine(ctx, line, color, width, dash = []) {
         ctx.beginPath();
         ctx.setLineDash(dash);
         ctx.moveTo(line.x1, line.y1);
@@ -157,60 +158,58 @@
         ctx.setLineDash([]);
     }
 
-    function renderEverything() {
+    function renderUserLines() {
         drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
-        userLines.forEach(l => drawLine(drawCtx, l, '#007bff', 3));
+        userLines.forEach(l => drawSingleLine(drawCtx, l, '#007bff', 2.5));
     }
 
-    // 3. Logic & Scoring
-    function generateLines() {
-        const n = document.getElementById('lineCount').value;
-        refCtx.clearRect(0, 0, refCanvas.width, refCanvas.height);
-        resetAll();
+    // --- Game Logic ---
+    function startNewGame() {
+        userLines = [];
         targetLines = [];
+        document.getElementById('scoreDisplay').innerText = '--%';
+        drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+        refCtx.clearRect(0, 0, refCanvas.width, refCanvas.height);
+
+        syncLayout();
+
+        const n = document.getElementById('lineCount').value;
         for (let i = 0; i < n; i++) {
             const line = {
-                x1: Math.random() * (refCanvas.width - 40) + 20,
-                y1: Math.random() * (refCanvas.height - 40) + 20,
-                x2: Math.random() * (refCanvas.width - 40) + 20,
-                y2: Math.random() * (refCanvas.height - 40) + 20
+                x1: Math.random() * (refCanvas.width - 20) + 10,
+                y1: Math.random() * (refCanvas.height - 20) + 10,
+                x2: Math.random() * (refCanvas.width - 20) + 10,
+                y2: Math.random() * (refCanvas.height - 20) + 10
             };
             targetLines.push(line);
-            drawLine(refCtx, line, '#333', 2);
+            drawSingleLine(refCtx, line, '#333', 1.5);
         }
     }
 
     function checkMatch() {
         if (userLines.length === 0) return;
-        const scaleX = drawCanvas.width / refCanvas.width;
-        const scaleY = drawCanvas.height / refCanvas.height;
+        const ratio = drawCanvas.width / refCanvas.width;
         let totalScore = 0;
 
         targetLines.forEach(t => {
-            const scaled = { x1: t.x1 * scaleX, y1: t.y1 * scaleY, x2: t.x2 * scaleX, y2: t.y2 * scaleY };
-            drawLine(drawCtx, scaled, 'rgba(255, 0, 0, 0.4)', 6, [15, 10]);
+            const scaled = { x1: t.x1 * ratio, y1: t.y1 * ratio, x2: t.x2 * ratio, y2: t.y2 * ratio };
+            drawSingleLine(drawCtx, scaled, 'rgba(255, 0, 0, 0.3)', 5, [10, 8]);
 
             let bestMatch = 0;
             userLines.forEach(u => {
                 const d1 = Math.hypot(scaled.x1 - u.x1, scaled.y1 - u.y1) + Math.hypot(scaled.x2 - u.x2, scaled.y2 - u.y2);
                 const d2 = Math.hypot(scaled.x1 - u.x2, scaled.y1 - u.y2) + Math.hypot(scaled.x2 - u.x1, scaled.y2 - u.y1);
-                const score = Math.max(0, 100 - (Math.min(d1, d2) / 15));
+                const score = Math.max(0, 100 - (Math.min(d1, d2) / 25));
                 if (score > bestMatch) bestMatch = score;
             });
             totalScore += bestMatch;
         });
 
-        document.getElementById('scorePop').innerText = `Score: ${Math.round(totalScore / targetLines.length)}%`;
+        document.getElementById('scoreDisplay').innerText = `${Math.round(totalScore / targetLines.length)}%`;
     }
 
-    function resetAll() {
-        userLines = [];
-        renderEverything();
-        document.getElementById('scorePop').innerText = 'Score: --';
-    }
-
-    // Initialize
-    generateLines();
+    syncLayout();
+    setTimeout(startNewGame, 100);
 
 </script>
 </body>
