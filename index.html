@@ -67,6 +67,7 @@
 
 <div class="toolbar">
     <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">🌓</button>
+    <button class="theme-toggle" id="touchToggle" onclick="toggleTouch()" title="Allow Touch Drawing">🖐️</button>
     <div style="display:flex; align-items:center; gap:8px;">
         <input type="number" id="lineCount" min="1" max="10" onchange="saveConfigs()">
         <div style="display:flex; align-items:center; gap:4px;">
@@ -97,6 +98,7 @@
     let targetLines = [];
     let isDrawing = false;
     let points = [];
+    let allowTouch = false;
 
     // --- Persistent Configurations ---
     function loadConfigs() {
@@ -132,6 +134,11 @@
         startNewGame();
     }
 
+    function toggleTouch() {
+        allowTouch = !allowTouch;
+        document.getElementById('touchToggle').style.opacity = allowTouch ? '1' : '0.4';
+    }
+
     // --- Drawing Logic ---
     function syncLayout() {
         const temp = drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height);
@@ -146,12 +153,14 @@
 
     window.addEventListener('resize', syncLayout);
 
-    function isPen(e) { return e.pointerType === 'pen'; }
+    function canDraw(e) { return e.pointerType === 'pen' || (allowTouch && e.pointerType === 'touch'); }
+
+    function getCanvasY(clientY) { return clientY - 40; }
 
     drawCanvas.onpointerdown = (e) => {
-        if (!isPen(e)) return;
+        if (!canDraw(e)) return;
         isDrawing = true;
-        points = [{ x: e.clientX, y: e.clientY }];
+        points = [{ x: e.clientX, y: getCanvasY(e.clientY) }];
         drawCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--ink-color').trim();
         drawCtx.lineWidth = 3;
         drawCtx.lineCap = 'round';
@@ -160,17 +169,29 @@
     };
 
     drawCanvas.onpointermove = (e) => {
-        if (!isDrawing || !isPen(e)) return;
-        points.push({ x: e.clientX, y: e.clientY });
-        if (points.length > 2) {
-            const lastTwoPoints = points.slice(-3);
-            const xc = (lastTwoPoints[1].x + lastTwoPoints[2].x) / 2;
-            const yc = (lastTwoPoints[1].y + lastTwoPoints[2].y) / 2;
+        if (!isDrawing || !canDraw(e)) return;
+        const newPoint = { x: e.clientX, y: getCanvasY(e.clientY) };
+        points.push(newPoint);
+        
+        if (points.length === 2) {
+            // First segment: draw a simple line
             drawCtx.beginPath();
-            drawCtx.moveTo(lastTwoPoints[0].x, lastTwoPoints[0].y);
-            drawCtx.quadraticCurveTo(lastTwoPoints[1].x, lastTwoPoints[1].y, xc, yc);
+            drawCtx.moveTo(points[0].x, points[0].y);
+            drawCtx.lineTo(points[1].x, points[1].y);
             drawCtx.stroke();
-            lastTwoPoints[0].x = xc; lastTwoPoints[0].y = yc;
+        } else if (points.length > 2) {
+            // Use quadratic curve through midpoints for smooth lines
+            const p0 = points[points.length - 3];
+            const p1 = points[points.length - 2];
+            const p2 = points[points.length - 1];
+            
+            const mid1 = { x: (p0.x + p1.x) / 2, y: (p0.y + p1.y) / 2 };
+            const mid2 = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+            
+            drawCtx.beginPath();
+            drawCtx.moveTo(mid1.x, mid1.y);
+            drawCtx.quadraticCurveTo(p1.x, p1.y, mid2.x, mid2.y);
+            drawCtx.stroke();
         }
     };
 
@@ -251,6 +272,7 @@
     loadConfigs();
     syncLayout();
     startNewGame();
+    document.getElementById('touchToggle').style.opacity = '0.4';
 
     // Register Service Worker
     if ('serviceWorker' in navigator) {
