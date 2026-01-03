@@ -1,5 +1,5 @@
 {
-  "name": "Pro Pen Matcher",
+  "name": "Pen Matcher",
   "short_name": "PenMatcher",
   "description": "A high-precision drawing practice app for stylus users.",
   "start_url": "./index.html",
@@ -11,13 +11,13 @@
       "src": "./icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "./icon-128.png",
       "sizes": "128x128",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }
