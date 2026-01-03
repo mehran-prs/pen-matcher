@@ -53,7 +53,13 @@
             z-index: 2000; border-radius: 6px; overflow: hidden;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
-        #refHeader { height: 20px; background: var(--ref-border); color: #fff; font-size: 10px; text-align: center; line-height: 20px; cursor: move; }
+        #refHeader { height: 20px; background: var(--ref-border); color: #fff; font-size: 10px; line-height: 20px; cursor: move; display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
+        #refHeader .title { flex: 1; text-align: center; }
+        .canvas-tools { display: flex; gap: 2px; }
+        .icon-btn { background: transparent; border: none; cursor: pointer; padding: 2px 4px; font-size: 10px; opacity: 0.6; color: inherit; }
+        .icon-btn.active { opacity: 1; }
+        .draw-tools { position: absolute; top: 44px; left: 4px; display: flex; gap: 4px; z-index: 100; }
+        .draw-tools .icon-btn { background: var(--button-bg); border-radius: 4px; padding: 4px 6px; font-size: 14px; color: var(--text-color); }
         #refCanvas { display: block; width: 100%; background: var(--ref-bg); }
 
         input[type="number"] { width: 32px; border: 1px solid var(--toolbar-border); background: var(--button-bg); color: var(--text-color); border-radius: 4px; padding: 5px; text-align: center; }
@@ -81,8 +87,20 @@
 
 <canvas id="drawCanvas"></canvas>
 
+<div class="draw-tools">
+    <button class="icon-btn" id="drawCrosshair" onclick="toggleDrawCrosshair()" title="Crosshair">⊕</button>
+    <button class="icon-btn" id="drawGrid" onclick="toggleDrawGrid()" title="Grid">▦</button>
+</div>
+
 <div id="floatingRef">
-    <div id="refHeader">REF</div>
+    <div id="refHeader">
+        <div class="canvas-tools">
+            <button class="icon-btn" id="refCrosshair" onclick="toggleRefCrosshair()" title="Crosshair">⊕</button>
+            <button class="icon-btn" id="refGrid" onclick="toggleRefGrid()" title="Grid">▦</button>
+        </div>
+        <span class="title">REF</span>
+        <div style="width: 32px;"></div>
+    </div>
     <canvas id="refCanvas"></canvas>
 </div>
 
@@ -99,6 +117,10 @@
     let isDrawing = false;
     let points = [];
     let allowTouch = false;
+    let refCrosshairEnabled = false;
+    let refGridEnabled = false;
+    let drawCrosshairEnabled = false;
+    let drawGridEnabled = false;
 
     // --- Persistent Configurations ---
     function loadConfigs() {
@@ -139,6 +161,68 @@
         document.getElementById('touchToggle').style.opacity = allowTouch ? '1' : '0.4';
     }
 
+    // --- Crosshair & Grid Toggles ---
+    function toggleRefCrosshair() {
+        refCrosshairEnabled = !refCrosshairEnabled;
+        document.getElementById('refCrosshair').classList.toggle('active', refCrosshairEnabled);
+        redrawRef();
+    }
+
+    function toggleRefGrid() {
+        refGridEnabled = !refGridEnabled;
+        document.getElementById('refGrid').classList.toggle('active', refGridEnabled);
+        redrawRef();
+    }
+
+    function toggleDrawCrosshair() {
+        drawCrosshairEnabled = !drawCrosshairEnabled;
+        document.getElementById('drawCrosshair').classList.toggle('active', drawCrosshairEnabled);
+        redrawDrawOverlays();
+    }
+
+    function toggleDrawGrid() {
+        drawGridEnabled = !drawGridEnabled;
+        document.getElementById('drawGrid').classList.toggle('active', drawGridEnabled);
+        redrawDrawOverlays();
+    }
+
+    function drawCrosshair(ctx, w, h, color) {
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(w / 2, 0);
+        ctx.lineTo(w / 2, h);
+        ctx.moveTo(0, h / 2);
+        ctx.lineTo(w, h / 2);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function drawGrid(ctx, w, h, color) {
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([2, 2]);
+        const cols = 4, rows = 4;
+        for (let i = 1; i < cols; i++) {
+            const x = (w / cols) * i;
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, h);
+            ctx.stroke();
+        }
+        for (let i = 1; i < rows; i++) {
+            const y = (h / rows) * i;
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(w, y);
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+
     // --- Drawing Logic ---
     function syncLayout() {
         const temp = drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height);
@@ -151,7 +235,7 @@
         refCanvas.height = 140 * (drawableHeight / window.innerWidth);
     }
 
-    window.addEventListener('resize', syncLayout);
+    window.addEventListener('resize', () => { syncLayout(); redrawRef(); redrawDrawOverlays(); });
 
     function canDraw(e) { return e.pointerType === 'pen' || (allowTouch && e.pointerType === 'touch'); }
 
@@ -211,16 +295,42 @@
         ctx.setLineDash([]);
     }
 
+    function redrawRef() {
+        refCtx.clearRect(0, 0, refCanvas.width, refCanvas.height);
+        const theme = document.documentElement.getAttribute('data-theme');
+        const refInk = theme === 'dark' ? '#eeeeee' : '#333333';
+        const overlayColor = theme === 'dark' ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.4)';
+        targetLines.forEach(p => renderLine(refCtx, p, refInk, 1.5));
+        if (refGridEnabled) drawGrid(refCtx, refCanvas.width, refCanvas.height, overlayColor);
+        if (refCrosshairEnabled) drawCrosshair(refCtx, refCanvas.width, refCanvas.height, overlayColor);
+    }
+
+    function redrawDrawOverlays() {
+        const overlay = document.getElementById('drawOverlay');
+        if (overlay) overlay.remove();
+        if (!drawCrosshairEnabled && !drawGridEnabled) return;
+
+        const canvas = document.createElement('canvas');
+        canvas.id = 'drawOverlay';
+        canvas.style.cssText = 'position:absolute;top:40px;left:0;width:100%;height:calc(100% - 40px);pointer-events:none;z-index:50;';
+        canvas.width = drawCanvas.width;
+        canvas.height = drawCanvas.height;
+        document.body.appendChild(canvas);
+
+        const ctx = canvas.getContext('2d');
+        const theme = document.documentElement.getAttribute('data-theme');
+        const overlayColor = theme === 'dark' ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)';
+        if (drawGridEnabled) drawGrid(ctx, canvas.width, canvas.height, overlayColor);
+        if (drawCrosshairEnabled) drawCrosshair(ctx, canvas.width, canvas.height, overlayColor);
+    }
+
     function startNewGame() {
         targetLines = [];
         drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
-        refCtx.clearRect(0, 0, refCanvas.width, refCanvas.height);
         syncLayout();
 
         const n = countInput.value;
         const allowCurves = curveCheckbox.checked;
-        const theme = document.documentElement.getAttribute('data-theme');
-        const refInk = theme === 'dark' ? '#eeeeee' : '#333333';
 
         for (let i = 0; i < n; i++) {
             const isCurve = allowCurves && Math.random() > 0.5;
@@ -234,8 +344,9 @@
                 cy: Math.random() * refCanvas.height
             };
             targetLines.push(p);
-            renderLine(refCtx, p, refInk, 1.5);
         }
+        redrawRef();
+        redrawDrawOverlays();
     }
 
     function showMatch() {
@@ -253,19 +364,21 @@
 
     // Draggable Ref Window
     let isDrag = false, offset = {x:0, y:0};
-    floatingRef.onpointerdown = (e) => {
+    const refHeader = document.getElementById('refHeader');
+    refHeader.onpointerdown = (e) => {
+        if (e.target.classList.contains('icon-btn')) return;
         isDrag = true; offset.x = e.clientX - floatingRef.offsetLeft;
         offset.y = e.clientY - floatingRef.offsetTop;
-        floatingRef.setPointerCapture(e.pointerId); e.stopPropagation();
+        refHeader.setPointerCapture(e.pointerId); e.stopPropagation();
     };
-    floatingRef.onpointermove = (e) => {
+    refHeader.onpointermove = (e) => {
         if (isDrag) {
             floatingRef.style.left = (e.clientX - offset.x) + 'px';
             floatingRef.style.top = (e.clientY - offset.y) + 'px';
             floatingRef.style.right = 'auto';
         }
     };
-    floatingRef.onpointerup = () => isDrag = false;
+    refHeader.onpointerup = () => isDrag = false;
 
     // --- Initialization ---
     initTheme();
