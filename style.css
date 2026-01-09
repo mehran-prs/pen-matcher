@@ -1,0 +1,196 @@
+:root {
+    --bg-color: #ffffff;
+    --toolbar-bg: #ffffff;
+    --toolbar-border: #a6a6a6;
+    --text-color: #333333;
+    --button-bg: #f0f0f0;
+    --ref-bg: #ffffff;
+    --ref-border: #333333;
+    --ink-color: #007bff;
+}
+
+[data-theme="dark"] {
+    --bg-color: #1a1a1a;
+    --toolbar-bg: #2d2d2d;
+    --toolbar-border: #444444;
+    --text-color: #eeeeee;
+    --button-bg: #444444;
+    --ref-bg: #2d2d2d;
+    --ref-border: #666666;
+    --ink-color: #4dabff;
+}
+
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg-color);
+    touch-action: none;
+    font-family: -apple-system, sans-serif;
+    transition: background 0.3s ease;
+}
+
+.toolbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 40px;
+    background: var(--toolbar-bg);
+    border-bottom: 1px solid var(--toolbar-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    z-index: 1000;
+    color: var(--text-color);
+}
+
+@media screen and (min-width: 768px) {
+    .toolbar {
+        gap: 12px;
+    }
+}
+
+#drawCanvas {
+    position: absolute;
+    top: 40px;
+    left: 0;
+    width: 100%;
+    height: calc(100% - 40px);
+    z-index: 1;
+}
+
+#floatingRef {
+    position: absolute;
+    top: 60px;
+    right: 15px;
+    width: 140px;
+    border: 2px solid var(--ref-border);
+    background: var(--ref-bg);
+    z-index: 2000;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    cursor: move;
+}
+
+#refHeader {
+    height: 20px;
+    background: var(--ref-border);
+    color: #fff;
+    font-size: 10px;
+    line-height: 20px;
+    cursor: move;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 4px;
+}
+
+#refHeader .title {
+    flex: 1;
+    text-align: center;
+}
+
+.canvas-tools {
+    display: flex;
+    gap: 2px;
+}
+
+.icon-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0 1px;
+    font-size: 18px;
+    opacity: 0.6;
+    color: inherit;
+}
+
+.icon-btn.active {
+    opacity: 1;
+}
+
+.draw-tools {
+    position: absolute;
+    top: 44px;
+    left: 4px;
+    display: flex;
+    gap: 4px;
+    z-index: 100;
+}
+
+.draw-tools .icon-btn {
+    background: var(--button-bg);
+    border-radius: 4px;
+    padding: 2px 4px;
+    color: var(--text-color);
+}
+
+#refCanvas {
+    display: block;
+    width: 100%;
+    background: var(--ref-bg);
+}
+
+input[type="number"] {
+    width: 32px;
+    border: 1px solid var(--toolbar-border);
+    background: var(--button-bg);
+    color: var(--text-color);
+    border-radius: 4px;
+    padding: 5px;
+    text-align: center;
+}
+
+button {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: none;
+    cursor: pointer;
+    background: var(--button-bg);
+    color: var(--text-color);
+}
+
+.btn-match {
+    background: #007bff;
+    color: white;
+}
+
+.theme-toggle {
+    font-size: 18px;
+    padding: 4px 8px;
+    background: transparent;
+    position: relative;
+    color: var(--text-color);
+}
+
+a.theme-toggle, a.theme-toggle:visited, a.theme-toggle:active, a.theme-toggle:hover {
+    color: var(--text-color);
+}
+
+.theme-toggle.disabled::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 20%;
+    width: 60%;
+    height: 2px;
+    background: #e53935;
+    transform: rotate(-45deg);
+    border-radius: 1px;
+}
+
+label {
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+}
+
+.no-select {
+    user-select: none;
+}

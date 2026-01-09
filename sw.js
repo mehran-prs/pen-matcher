@@ -2,6 +2,8 @@ const CACHE_NAME = 'pen-matcher-v2';
 const ASSETS = [
     './',
     './index.html',
+    './style.css',
+    './app.js',
     './manifest.json'
 ];
 
