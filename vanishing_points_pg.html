@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Perspective & Vanishing Points</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e1e;
+            color: #fff;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+        #sidebar {
+            width: 350px;
+            background-color: #2d2d2d;
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.5);
+            z-index: 10;
+            overflow-y: auto;
+        }
+        #canvas-container {
+            flex-grow: 1;
+            position: relative;
+            cursor: grab;
+        }
+        #canvas-container:active {
+            cursor: grabbing;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        .control-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        input[type=range], select {
+            width: 100%;
+            cursor: pointer;
+        }
+        .val-input {
+            width: 50px;
+            background: #444;
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 2px 4px;
+            font-size: 13px;
+            text-align: right;
+            outline: none;
+        }
+        .val-input:focus {
+            border-color: #00ffff;
+        }
+        select {
+            background: #444;
+            color: white;
+            border: none;
+            padding: 8px;
+            border-radius: 4px;
+            outline: none;
+            margin-top: 5px;
+        }
+        .legend {
+            margin-top: 20px;
+            padding: 10px;
+            background: #1e1e1e;
+            border-radius: 5px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .color-box {
+            width: 15px;
+            height: 15px;
+            margin-right: 10px;
+            border-radius: 3px;
+        }
+        .line-box {
+            width: 15px;
+            height: 0px;
+            border-top: 2px dashed #00ffff;
+            margin-right: 10px;
+        }
+        h2 { margin-top: 0; font-size: 20px; border-bottom: 1px solid #444; padding-bottom: 10px; }
+        p.info { font-size: 13px; color: #aaa; line-height: 1.5; margin-bottom: 20px; }
+        .highlight { color: #00ffff; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <h2>Appearance</h2>
+        <div class="control-group">
+            <select id="viewMode">
+                <option value="solid">Solid Object (Real World)</option>
+                <option value="wireframe">Wireframe (See-through)</option>
+            </select>
+        </div>
+
+        <h2>Camera Setup</h2>
+        <p class="info">Use your <b>Mouse Wheel</b> to zoom. <b>Move Z</b> changes how close the camera is to the cube, which dictates the perspective distortion.</p>
+        <div class="control-group">
+            <label><span>Global Zoom (%)</span> <input type="number" class="val-input" id="valZoom" min="10" max="500" step="5" value="60"></label>
+            <input type="range" id="zoomOut" min="0.1" max="5" step="0.05" value="0.6">
+        </div>
+        <div class="control-group">
+            <label><span>Move Z (Distance/Distortion)</span> <input type="number" class="val-input" id="valPosZ" min="-350" max="4000" value="0"></label>
+            <input type="range" id="posZ" min="-350" max="4000" value="0">
+        </div>
+
+        <h2>Cube Position</h2>
+        <p class="info"><b>Click & Drag</b> the canvas to move the cube.</p>
+        <div class="control-group">
+            <label><span>Move X (Left/Right)</span> <input type="number" class="val-input" id="valPosX" min="-2000" max="2000" value="0"></label>
+            <input type="range" id="posX" min="-2000" max="2000" value="0">
+        </div>
+        <div class="control-group">
+            <label><span>Move Y (Up/Down)</span> <input type="number" class="val-input" id="valPosY" min="-2000" max="2000" value="-100"></label>
+            <input type="range" id="posY" min="-2000" max="2000" value="-100">
+        </div>
+
+        <h2>Cube Orientation</h2>
+        <div class="control-group">
+            <label><span>Rotate X (Pitch °)</span> <input type="number" class="val-input" id="valX" min="-90" max="90" value="20"></label>
+            <input type="range" id="rotX" min="-90" max="90" value="20">
+        </div>
+        <div class="control-group">
+            <label><span>Rotate Y (Yaw °)</span> <input type="number" class="val-input" id="valY" min="-90" max="90" value="30"></label>
+            <input type="range" id="rotY" min="-90" max="90" value="30">
+        </div>
+        <div class="control-group">
+            <label><span>Rotate Z (Roll °)</span> <input type="number" class="val-input" id="valZ" min="-90" max="90" value="0"></label>
+            <input type="range" id="rotZ" min="-90" max="90" value="0">
+        </div>
+
+        <div class="legend">
+            <div class="legend-item"><div class="line-box"></div> Horizon Line</div>
+            <div class="legend-item"><div class="color-box" style="background: #ff5555;"></div> VP 1 (X-Axis)</div>
+            <div class="legend-item"><div class="color-box" style="background: #5555ff;"></div> VP 2 (Y-Axis)</div>
+            <div class="legend-item"><div class="color-box" style="background: #55ff55;"></div> VP 3 (Z-Axis)</div>
+        </div>
+    </div>
+
+    <div id="canvas-container">
+        <canvas id="canvas"></canvas>
+    </div>
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // UI Elements
+    const viewModeSelect = document.getElementById('viewMode');
+    const rotXSlider = document.getElementById('rotX'), rotYSlider = document.getElementById('rotY'), rotZSlider = document.getElementById('rotZ');
+    const posXSlider = document.getElementById('posX'), posYSlider = document.getElementById('posY'), posZSlider = document.getElementById('posZ');
+    const zoomSlider = document.getElementById('zoomOut');
+
+    const valX = document.getElementById('valX'), valY = document.getElementById('valY'), valZ = document.getElementById('valZ');
+    const valPosX = document.getElementById('valPosX'), valPosY = document.getElementById('valPosY'), valPosZ = document.getElementById('valPosZ');
+    const valZoom = document.getElementById('valZoom');
+
+    // Cube Definition
+    const vertices = [
+        {x: -1, y: -1, z: -1}, {x: 1, y: -1, z: -1}, {x: 1, y: 1, z: -1}, {x: -1, y: 1, z: -1},
+        {x: -1, y: -1, z: 1}, {x: 1, y: -1, z: 1}, {x: 1, y: 1, z: 1}, {x: -1, y: 1, z: 1}
+    ];
+
+    const faces = [
+        { v: [0, 1, 2, 3], n: {x:0, y:0, z:-1}, color: '#444444' },
+        { v: [4, 5, 6, 7], n: {x:0, y:0, z:1},  color: '#2d2d2d' },
+        { v: [1, 5, 6, 2], n: {x:1, y:0, z:0},  color: '#383838' },
+        { v: [0, 4, 7, 3], n: {x:-1, y:0, z:0}, color: '#383838' },
+        { v: [3, 2, 6, 7], n: {x:0, y:1, z:0},  color: '#555555' },
+        { v: [0, 1, 5, 4], n: {x:0, y:-1, z:0}, color: '#1e1e1e' }
+    ];
+
+    const edges = [
+        [0, 1, 0], [1, 2, 1], [2, 3, 0], [3, 0, 1], 
+        [4, 5, 0], [5, 6, 1], [6, 7, 0], [7, 4, 1], 
+        [0, 4, 2], [1, 5, 2], [2, 6, 2], [3, 7, 2]  
+    ];
+
+    function resize() {
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = canvas.parentElement.clientHeight;
+        draw();
+    }
+    window.addEventListener('resize', resize);
+
+    function rotate3D(x, y, z, pitch, yaw, roll) {
+        const cx = Math.cos(pitch), sx = Math.sin(pitch);
+        const cy = Math.cos(yaw),   sy = Math.sin(yaw);
+        const cz = Math.cos(roll),  sz = Math.sin(roll);
+
+        let x1 = x * cy + z * sy, y1 = y, z1 = -x * sy + z * cy;
+        let x2 = x1, y2 = y1 * cx - z1 * sx, z2 = y1 * sx + z1 * cx;
+        let x3 = x2 * cz - y2 * sz, y3 = x2 * sz + y2 * cz, z3 = z2;
+
+        return { x: x3, y: y3, z: z3 };
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Get values
+        const pitch = parseFloat(rotXSlider.value) * (Math.PI / 180);
+        const yaw = parseFloat(rotYSlider.value) * (Math.PI / 180);
+        const roll = parseFloat(rotZSlider.value) * (Math.PI / 180);
+        const pX = parseFloat(posXSlider.value), pY = parseFloat(posYSlider.value), pZ = parseFloat(posZSlider.value);
+        const zoom = parseFloat(zoomSlider.value);
+        const viewMode = viewModeSelect.value;
+        const focal = 600; // Hardcoded static base lens so zoom handles all scaling
+
+        // Sync number inputs (skip the one currently being edited to avoid cursor jumps)
+        const active = document.activeElement;
+        if (active !== valX) valX.value = rotXSlider.value;
+        if (active !== valY) valY.value = rotYSlider.value;
+        if (active !== valZ) valZ.value = rotZSlider.value;
+        if (active !== valPosX) valPosX.value = Math.round(pX);
+        if (active !== valPosY) valPosY.value = Math.round(pY);
+        if (active !== valPosZ) valPosZ.value = Math.round(pZ);
+        if (active !== valZoom) valZoom.value = Math.round(zoom * 100);
+
+        const cx = canvas.width / 2, cy = canvas.height / 2;
+        const cubeSize = 100, cameraZ = 4;
+
+        // HORIZON LINE
+        ctx.beginPath();
+        ctx.moveTo(0, cy);
+        ctx.lineTo(canvas.width, cy);
+        ctx.strokeStyle = '#00ffff';
+        ctx.setLineDash([10, 10]);
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#00ffff';
+        ctx.font = '14px Arial';
+        ctx.fillText("Horizon Line", 20, cy - 10);
+
+        // VPs - Scaled by Zoom
+        const axisX = rotate3D(1, 0, 0, pitch, yaw, roll);
+        const axisY = rotate3D(0, 1, 0, pitch, yaw, roll);
+        const axisZ = rotate3D(0, 0, 1, pitch, yaw, roll);
+
+        const vps = [
+            { x: cx + (axisX.x / axisX.z) * focal * zoom, y: cy - (axisX.y / axisX.z) * focal * zoom, valid: Math.abs(axisX.z) > 0.01, color: '#ff5555' },
+            { x: cx + (axisY.x / axisY.z) * focal * zoom, y: cy - (axisY.y / axisY.z) * focal * zoom, valid: Math.abs(axisY.z) > 0.01, color: '#5555ff' },
+            { x: cx + (axisZ.x / axisZ.z) * focal * zoom, y: cy - (axisZ.y / axisZ.z) * focal * zoom, valid: Math.abs(axisZ.z) > 0.01, color: '#55ff55' }
+        ];
+
+        const vpNames=['X','Y','Z']
+
+        // Vertices - Scaled by Zoom
+        const projectedVertices = [];
+        const transformedVertices = [];
+        
+        for (let v of vertices) {
+            let rotated = rotate3D(v.x * cubeSize, v.y * cubeSize, v.z * cubeSize, pitch, yaw, roll);
+            let translated = { x: rotated.x + pX, y: rotated.y + pY, z: rotated.z + pZ + (cameraZ * cubeSize) };
+            transformedVertices.push(translated);
+            
+            projectedVertices.push({
+                x: cx + (translated.x / translated.z) * focal * zoom,
+                y: cy - (translated.y / translated.z) * focal * zoom
+            });
+        }
+
+        // Back-face Culling
+        let visibleFaces = [];
+        for (let f of faces) {
+            let rn = rotate3D(f.n.x, f.n.y, f.n.z, pitch, yaw, roll);
+            let faceCenter = {x: 0, y: 0, z: 0};
+            for(let vi of f.v) {
+                faceCenter.x += transformedVertices[vi].x; faceCenter.y += transformedVertices[vi].y; faceCenter.z += transformedVertices[vi].z;
+            }
+            faceCenter.x /= 4; faceCenter.y /= 4; faceCenter.z /= 4;
+            
+            let dot = (rn.x * faceCenter.x) + (rn.y * faceCenter.y) + (rn.z * faceCenter.z);
+            f.zDepth = faceCenter.z;
+
+            if (dot < 0 || viewMode === 'wireframe') visibleFaces.push(f);
+        }
+
+        visibleFaces.sort((a, b) => b.zDepth - a.zDepth);
+
+        // Find visible edges
+        let visibleEdgesList = [];
+        for (let e of edges) {
+            let isVisible = false;
+            if (viewMode === 'wireframe') isVisible = true;
+            else {
+                for (let f of visibleFaces) {
+                    if (f.v.includes(e[0]) && f.v.includes(e[1])) { isVisible = true; break; }
+                }
+            }
+            if (isVisible) visibleEdgesList.push(e);
+        }
+
+        // Draw Guide lines
+        ctx.lineWidth = 1;
+        for (let e of visibleEdgesList) {
+            let p1 = projectedVertices[e[0]];
+            let vp = vps[e[2]];
+            if (vp.valid) {
+                ctx.beginPath(); ctx.moveTo(vp.x, vp.y); ctx.lineTo(p1.x, p1.y);
+                ctx.strokeStyle = vp.color + '44'; ctx.stroke();
+            }
+        }
+
+        // Draw Solid Faces
+        if (viewMode === 'solid') {
+            for (let f of visibleFaces) {
+                ctx.beginPath();
+                for (let i = 0; i < f.v.length; i++) {
+                    let p = projectedVertices[f.v[i]];
+                    if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+                }
+                ctx.closePath();
+                ctx.fillStyle = f.color; ctx.fill();
+            }
+        }
+
+        // Draw Edges
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#ffffff';
+        for (let e of visibleEdgesList) {
+            let p1 = projectedVertices[e[0]], p2 = projectedVertices[e[1]];
+            ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+        }
+
+        // Draw VPs
+        for (let i = 0; i < vps.length; i++) {
+            let vp = vps[i];
+            if (vp.valid) {
+                ctx.beginPath(); ctx.arc(vp.x, vp.y, 6, 0, Math.PI * 2);
+                ctx.fillStyle = vp.color; ctx.fill();
+                ctx.fillStyle = '#fff'; ctx.font = 'bold 14px Arial';
+                ctx.fillText(`${vpNames[i]}-VP`, vp.x + 10, vp.y - 10);
+            }
+        }
+    }
+
+    // --- MOUSE INTERACTIONS ---
+    let isDragging = false;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+
+    canvas.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+    });
+
+    window.addEventListener('mouseup', () => { isDragging = false; });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        
+        let dx = e.clientX - lastMouseX;
+        let dy = e.clientY - lastMouseY;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+
+        let zDepth = parseFloat(posZSlider.value) + 400; 
+        let focal = 600;
+        let zoom = parseFloat(zoomSlider.value);
+        
+        // Correct 3D tracking math
+        let moveX3D = (dx / zoom) * (zDepth / focal);
+        let moveY3D = -(dy / zoom) * (zDepth / focal); 
+
+        posXSlider.value = parseFloat(posXSlider.value) + moveX3D;
+        posYSlider.value = parseFloat(posYSlider.value) + moveY3D;
+        draw();
+    });
+
+    // Mouse Wheel Zoom
+    canvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        let currentZoom = parseFloat(zoomSlider.value);
+        let newZoom = currentZoom - (e.deltaY * 0.001);
+        if (newZoom < 0.1) newZoom = 0.1;
+        if (newZoom > 5) newZoom = 5;
+        zoomSlider.value = newZoom;
+        draw();
+    });
+
+    // Attach events
+    [rotXSlider, rotYSlider, rotZSlider, posXSlider, posYSlider, posZSlider, zoomSlider].forEach(slider => {
+        slider.addEventListener('input', draw);
+    });
+    viewModeSelect.addEventListener('change', draw);
+
+    // Number inputs drive their sliders (zoom input is in percent)
+    const numberInputPairs = [
+        [valX, rotXSlider, 1], [valY, rotYSlider, 1], [valZ, rotZSlider, 1],
+        [valPosX, posXSlider, 1], [valPosY, posYSlider, 1], [valPosZ, posZSlider, 1],
+        [valZoom, zoomSlider, 0.01]
+    ];
+    numberInputPairs.forEach(([input, slider, factor]) => {
+        input.addEventListener('input', () => {
+            if (input.value === '' || input.value === '-') return;
+            slider.value = parseFloat(input.value) * factor;
+            draw();
+        });
+    });
+
+    // Initial draw
+    resize();
+</script>
+
+</body>
+</html>
