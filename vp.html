@@ -35,6 +35,7 @@
             display: block;
             width: 100%;
             height: 100%;
+            touch-action: none;
         }
         .control-group {
             margin-bottom: 20px;
@@ -131,17 +132,17 @@
         </div>
         <div class="control-group">
             <label><span>Move Y (Up/Down)</span> <input type="number" class="val-input" id="valPosY" min="-2000" max="2000" value="-100"></label>
-            <input type="range" id="posY" min="-2000" max="2000" value="-100">
+            <input type="range" id="posY" min="-2000" max="2000" value="0">
         </div>
 
         <h2>Cube Orientation</h2>
         <div class="control-group">
             <label><span>Rotate X (Pitch °)</span> <input type="number" class="val-input" id="valX" min="-90" max="90" value="20"></label>
-            <input type="range" id="rotX" min="-90" max="90" value="20">
+            <input type="range" id="rotX" min="-90" max="90" value="0">
         </div>
         <div class="control-group">
             <label><span>Rotate Y (Yaw °)</span> <input type="number" class="val-input" id="valY" min="-90" max="90" value="30"></label>
-            <input type="range" id="rotY" min="-90" max="90" value="30">
+            <input type="range" id="rotY" min="-90" max="90" value="0">
         </div>
         <div class="control-group">
             <label><span>Rotate Z (Roll °)</span> <input type="number" class="val-input" id="valZ" min="-90" max="90" value="0"></label>
@@ -360,21 +361,19 @@
     let lastMouseX = 0;
     let lastMouseY = 0;
 
-    canvas.addEventListener('mousedown', (e) => {
+    function startDrag(x, y) {
         isDragging = true;
-        lastMouseX = e.clientX;
-        lastMouseY = e.clientY;
-    });
+        lastMouseX = x;
+        lastMouseY = y;
+    }
 
-    window.addEventListener('mouseup', () => { isDragging = false; });
-
-    window.addEventListener('mousemove', (e) => {
+    function moveDrag(x, y) {
         if (!isDragging) return;
-        
-        let dx = e.clientX - lastMouseX;
-        let dy = e.clientY - lastMouseY;
-        lastMouseX = e.clientX;
-        lastMouseY = e.clientY;
+
+        let dx = x - lastMouseX;
+        let dy = y - lastMouseY;
+        lastMouseX = x;
+        lastMouseY = y;
 
         let zDepth = parseFloat(posZSlider.value) + 400; 
         let focal = 600;
@@ -387,6 +386,60 @@
         posXSlider.value = parseFloat(posXSlider.value) + moveX3D;
         posYSlider.value = parseFloat(posYSlider.value) + moveY3D;
         draw();
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+        startDrag(e.clientX, e.clientY);
+    });
+
+    window.addEventListener('mouseup', () => { isDragging = false; });
+
+    window.addEventListener('mousemove', (e) => {
+        moveDrag(e.clientX, e.clientY);
+    });
+
+    // --- TOUCH INTERACTIONS ---
+    let lastPinchDist = null;
+
+    canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+            startDrag(e.touches[0].clientX, e.touches[0].clientY);
+        } else if (e.touches.length === 2) {
+            isDragging = false;
+            lastPinchDist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+        }
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        if (e.touches.length === 1) {
+            moveDrag(e.touches[0].clientX, e.touches[0].clientY);
+        } else if (e.touches.length === 2 && lastPinchDist !== null) {
+            let dist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+            let currentZoom = parseFloat(zoomSlider.value);
+            let newZoom = currentZoom * (dist / lastPinchDist);
+            if (newZoom < 0.1) newZoom = 0.1;
+            if (newZoom > 5) newZoom = 5;
+            zoomSlider.value = newZoom;
+            lastPinchDist = dist;
+            draw();
+        }
+    }, { passive: false });
+
+    window.addEventListener('touchend', (e) => {
+        if (e.touches.length === 0) {
+            isDragging = false;
+            lastPinchDist = null;
+        } else if (e.touches.length === 1) {
+            lastPinchDist = null;
+            startDrag(e.touches[0].clientX, e.touches[0].clientY);
+        }
     });
 
     // Mouse Wheel Zoom
