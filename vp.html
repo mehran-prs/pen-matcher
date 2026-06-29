@@ -208,8 +208,8 @@
             <input type="range" id="zoomOut" min="0.1" max="5" step="0.05" value="0.6">
         </div>
         <div class="control-group">
-            <label><span>Move Z (Distance/Distortion)</span> <span class="input-group"><button class="reset-btn" data-for="valPosZ" title="Reset to default">↺</button><input type="number" class="val-input" id="valPosZ" min="-350" max="4000" value="0"></span></label>
-            <input type="range" id="posZ" min="-350" max="4000" value="0">
+            <label><span>Global Size (%)</span> <span class="input-group"><button class="reset-btn" data-for="valSize" title="Reset to default">↺</button><input type="number" class="val-input" id="valSize" min="10" max="500" step="5" value="100"></span></label>
+            <input type="range" id="globalSize" min="0.1" max="5" step="0.05" value="1">
         </div>
 
         <h2>Cube Position</h2>
@@ -221,6 +221,10 @@
         <div class="control-group">
             <label><span>Move Y (Up/Down)</span> <span class="input-group"><button class="reset-btn" data-for="valPosY" title="Reset to default">↺</button><input type="number" class="val-input" id="valPosY" min="-2000" max="2000" value="-100"></span></label>
             <input type="range" id="posY" min="-2000" max="2000" value="0">
+        </div>
+        <div class="control-group">
+            <label><span>Move Z (Distance/Distortion)</span> <span class="input-group"><button class="reset-btn" data-for="valPosZ" title="Reset to default">↺</button><input type="number" class="val-input" id="valPosZ" min="-350" max="4000" value="0"></span></label>
+            <input type="range" id="posZ" min="-350" max="4000" value="0">
         </div>
 
         <h2>Cube Orientation</h2>
@@ -258,10 +262,12 @@
     const rotXSlider = document.getElementById('rotX'), rotYSlider = document.getElementById('rotY'), rotZSlider = document.getElementById('rotZ');
     const posXSlider = document.getElementById('posX'), posYSlider = document.getElementById('posY'), posZSlider = document.getElementById('posZ');
     const zoomSlider = document.getElementById('zoomOut');
+    const sizeSlider = document.getElementById('globalSize');
 
     const valX = document.getElementById('valX'), valY = document.getElementById('valY'), valZ = document.getElementById('valZ');
     const valPosX = document.getElementById('valPosX'), valPosY = document.getElementById('valPosY'), valPosZ = document.getElementById('valPosZ');
     const valZoom = document.getElementById('valZoom');
+    const valSize = document.getElementById('valSize');
 
     // Cube Definition
     const vertices = [
@@ -404,6 +410,7 @@
         if (active !== valPosY) valPosY.value = Math.round(parseFloat(posYSlider.value));
         if (active !== valPosZ) valPosZ.value = Math.round(parseFloat(posZSlider.value));
         if (active !== valZoom) valZoom.value = Math.round(zoom * 100);
+        if (active !== valSize) valSize.value = Math.round(parseFloat(sizeSlider.value) * 100);
 
         const cx = canvas.width / 2, cy = canvas.height / 2;
 
@@ -433,11 +440,16 @@
         const roll = state.rotZ * (Math.PI / 180);
         const pX = state.posX, pY = state.posY, pZ = state.posZ;
         const cubeSize = 100, cameraZ = 4;
+        // Global size scales the cube's real 3D dimensions while the camera
+        // distance (cameraZ * cubeSize) stays fixed, so bigger cubes also get
+        // more perspective distortion — unlike zoom, which scales projection.
+        const sizeScale = parseFloat(sizeSlider.value);
+        const vScale = cubeSize * sizeScale;
 
         const projectedVertices = [];
         const transformedVertices = [];
         for (let v of vertices) {
-            let rotated = rotate3D(v.x * cubeSize, v.y * cubeSize, v.z * cubeSize, pitch, yaw, roll);
+            let rotated = rotate3D(v.x * vScale, v.y * vScale, v.z * vScale, pitch, yaw, roll);
             let translated = { x: rotated.x + pX, y: rotated.y + pY, z: rotated.z + pZ + (cameraZ * cubeSize) };
             transformedVertices.push(translated);
             projectedVertices.push({
@@ -648,13 +660,15 @@
         slider.addEventListener('input', onControlChange);
     });
     zoomSlider.addEventListener('input', draw);
+    sizeSlider.addEventListener('input', draw);
     viewModeSelect.addEventListener('change', draw);
 
     // Number inputs drive their sliders (zoom input is in percent)
     const numberInputPairs = [
         [valX, rotXSlider, 1, true], [valY, rotYSlider, 1, true], [valZ, rotZSlider, 1, true],
         [valPosX, posXSlider, 1, true], [valPosY, posYSlider, 1, true], [valPosZ, posZSlider, 1, true],
-        [valZoom, zoomSlider, 0.01, false]
+        [valZoom, zoomSlider, 0.01, false],
+        [valSize, sizeSlider, 0.01, false]
     ];
     numberInputPairs.forEach(([input, slider, factor, perCube]) => {
         input.addEventListener('input', () => {
@@ -719,6 +733,7 @@
         const data = {
             version: 1,
             zoom: parseFloat(zoomSlider.value),
+            size: parseFloat(sizeSlider.value),
             viewMode: viewModeSelect.value,
             currentCubeIndex,
             cubes
@@ -750,6 +765,7 @@
                 }));
                 currentCubeIndex = Math.min(Math.max(parseInt(data.currentCubeIndex, 10) || 0, 0), cubes.length - 1);
                 if (typeof data.zoom === 'number') zoomSlider.value = data.zoom;
+                if (typeof data.size === 'number') sizeSlider.value = data.size;
                 if (data.viewMode) viewModeSelect.value = data.viewMode;
                 rebuildCubeSelect();
                 loadCubeToControls(cubes[currentCubeIndex]);
