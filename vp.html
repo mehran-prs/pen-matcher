@@ -10,22 +10,59 @@
             background-color: #1e1e1e;
             color: #fff;
             margin: 0;
-            display: flex;
             height: 100vh;
             overflow: hidden;
             user-select: none;
         }
         #sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 350px;
-            background-color: #2d2d2d;
+            height: 100vh;
+            box-sizing: border-box;
+            background-color: rgba(45, 45, 45, 0.2);
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(12px);
             padding: 20px;
-            box-shadow: 2px 0 5px rgba(0,0,0,0.5);
+            padding-top: 70px;
+            box-shadow: 2px 0 15px rgba(0,0,0,0.5);
             z-index: 10;
             overflow-y: auto;
+            transition: transform 0.3s ease;
+        }
+        #sidebar.hidden {
+            transform: translateX(-100%);
+        }
+        #toggleSidebar {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 20;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(45, 45, 45, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 8px;
+            font-size: 20px;
+            cursor: pointer;
+            outline: none;
+        }
+        #toggleSidebar:hover {
+            border-color: #00ffff;
         }
         #canvas-container {
-            flex-grow: 1;
-            position: relative;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
             cursor: grab;
         }
         #canvas-container:active {
@@ -103,6 +140,8 @@
     </style>
 </head>
 <body>
+
+    <button id="toggleSidebar" title="Toggle panel">☰</button>
 
     <div id="sidebar">
         <h2>Appearance</h2>
@@ -471,6 +510,13 @@
             slider.value = parseFloat(input.value) * factor;
             draw();
         });
+    });
+
+    // Sidebar toggle
+    const sidebar = document.getElementById('sidebar');
+    const toggleSidebarBtn = document.getElementById('toggleSidebar');
+    toggleSidebarBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('hidden');
     });
 
     // Initial draw
