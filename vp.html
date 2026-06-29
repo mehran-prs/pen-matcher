@@ -34,28 +34,41 @@
         #sidebar.hidden {
             transform: translateX(-100%);
         }
-        #toggleSidebar {
+        #topbar {
             position: fixed;
             top: 15px;
             left: 15px;
             z-index: 20;
-            width: 44px;
-            height: 44px;
             display: flex;
             align-items: center;
-            justify-content: center;
+            gap: 8px;
+        }
+        .topbar-control {
+            height: 44px;
+            margin: 0;
             background-color: rgba(45, 45, 45, 0.7);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             color: #fff;
             border: 1px solid #555;
             border-radius: 8px;
-            font-size: 20px;
-            cursor: pointer;
             outline: none;
+            cursor: pointer;
         }
-        #toggleSidebar:hover {
+        .topbar-control:hover {
             border-color: #00ffff;
+        }
+        .topbar-btn {
+            width: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        #cubeSelect {
+            width: auto;
+            min-width: 110px;
+            padding: 0 10px;
         }
         #canvas-container {
             position: absolute;
@@ -88,7 +101,7 @@
             cursor: pointer;
         }
         .val-input {
-            width: 50px;
+            width: 30px;
             background: #444;
             color: #fff;
             border: 1px solid #555;
@@ -99,6 +112,30 @@
             outline: none;
         }
         .val-input:focus {
+            border-color: #00ffff;
+        }
+        .input-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .reset-btn {
+            width: 20px;
+            height: 20px;
+            padding: 0;
+            background: #444;
+            color: #aaa;
+            border: 1px solid #555;
+            border-radius: 4px;
+            font-size: 12px;
+            line-height: 1;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .reset-btn:hover {
+            color: #00ffff;
             border-color: #00ffff;
         }
         select {
@@ -141,7 +178,12 @@
 </head>
 <body>
 
-    <button id="toggleSidebar" title="Toggle panel">☰</button>
+    <div id="topbar">
+        <button id="toggleSidebar" class="topbar-control topbar-btn" title="Toggle panel">☰</button>
+        <select id="cubeSelect" class="topbar-control" title="Current cube"></select>
+        <button id="addCube" class="topbar-control topbar-btn" title="Add cube">+</button>
+        <button id="deleteCube" class="topbar-control topbar-btn" title="Delete current cube">🗑</button>
+    </div>
 
     <div id="sidebar">
         <h2>Appearance</h2>
@@ -155,36 +197,36 @@
         <h2>Camera Setup</h2>
         <p class="info">Use your <b>Mouse Wheel</b> to zoom. <b>Move Z</b> changes how close the camera is to the cube, which dictates the perspective distortion.</p>
         <div class="control-group">
-            <label><span>Global Zoom (%)</span> <input type="number" class="val-input" id="valZoom" min="10" max="500" step="5" value="60"></label>
+            <label><span>Global Zoom (%)</span> <span class="input-group"><button class="reset-btn" data-for="valZoom" title="Reset to default">↺</button><input type="number" class="val-input" id="valZoom" min="10" max="500" step="5" value="60"></span></label>
             <input type="range" id="zoomOut" min="0.1" max="5" step="0.05" value="0.6">
         </div>
         <div class="control-group">
-            <label><span>Move Z (Distance/Distortion)</span> <input type="number" class="val-input" id="valPosZ" min="-350" max="4000" value="0"></label>
+            <label><span>Move Z (Distance/Distortion)</span> <span class="input-group"><button class="reset-btn" data-for="valPosZ" title="Reset to default">↺</button><input type="number" class="val-input" id="valPosZ" min="-350" max="4000" value="0"></span></label>
             <input type="range" id="posZ" min="-350" max="4000" value="0">
         </div>
 
         <h2>Cube Position</h2>
         <p class="info"><b>Click & Drag</b> the canvas to move the cube.</p>
         <div class="control-group">
-            <label><span>Move X (Left/Right)</span> <input type="number" class="val-input" id="valPosX" min="-2000" max="2000" value="0"></label>
+            <label><span>Move X (Left/Right)</span> <span class="input-group"><button class="reset-btn" data-for="valPosX" title="Reset to default">↺</button><input type="number" class="val-input" id="valPosX" min="-2000" max="2000" value="0"></span></label>
             <input type="range" id="posX" min="-2000" max="2000" value="0">
         </div>
         <div class="control-group">
-            <label><span>Move Y (Up/Down)</span> <input type="number" class="val-input" id="valPosY" min="-2000" max="2000" value="-100"></label>
+            <label><span>Move Y (Up/Down)</span> <span class="input-group"><button class="reset-btn" data-for="valPosY" title="Reset to default">↺</button><input type="number" class="val-input" id="valPosY" min="-2000" max="2000" value="-100"></span></label>
             <input type="range" id="posY" min="-2000" max="2000" value="0">
         </div>
 
         <h2>Cube Orientation</h2>
         <div class="control-group">
-            <label><span>Rotate X (Pitch °)</span> <input type="number" class="val-input" id="valX" min="-90" max="90" value="20"></label>
+            <label><span>Rotate X (Pitch °)</span> <span class="input-group"><button class="reset-btn" data-for="valX" title="Reset to default">↺</button><input type="number" class="val-input" id="valX" min="-90" max="90" value="20"></span></label>
             <input type="range" id="rotX" min="-90" max="90" value="0">
         </div>
         <div class="control-group">
-            <label><span>Rotate Y (Yaw °)</span> <input type="number" class="val-input" id="valY" min="-90" max="90" value="30"></label>
+            <label><span>Rotate Y (Yaw °)</span> <span class="input-group"><button class="reset-btn" data-for="valY" title="Reset to default">↺</button><input type="number" class="val-input" id="valY" min="-90" max="90" value="30"></span></label>
             <input type="range" id="rotY" min="-90" max="90" value="0">
         </div>
         <div class="control-group">
-            <label><span>Rotate Z (Roll °)</span> <input type="number" class="val-input" id="valZ" min="-90" max="90" value="0"></label>
+            <label><span>Rotate Z (Roll °)</span> <span class="input-group"><button class="reset-btn" data-for="valZ" title="Reset to default">↺</button><input type="number" class="val-input" id="valZ" min="-90" max="90" value="0"></span></label>
             <input type="range" id="rotZ" min="-90" max="90" value="0">
         </div>
 
@@ -235,6 +277,91 @@
         [0, 4, 2], [1, 5, 2], [2, 6, 2], [3, 7, 2]  
     ];
 
+    // --- MULTI-CUBE STATE ---
+    // Each cube stores its own position + orientation. Zoom stays global (camera).
+    function readControls() {
+        return {
+            rotX: parseFloat(rotXSlider.value), rotY: parseFloat(rotYSlider.value), rotZ: parseFloat(rotZSlider.value),
+            posX: parseFloat(posXSlider.value), posY: parseFloat(posYSlider.value), posZ: parseFloat(posZSlider.value)
+        };
+    }
+    function loadCubeToControls(c) {
+        rotXSlider.value = c.rotX; rotYSlider.value = c.rotY; rotZSlider.value = c.rotZ;
+        posXSlider.value = c.posX; posYSlider.value = c.posY; posZSlider.value = c.posZ;
+    }
+    function saveControlsToCube(c) {
+        c.rotX = parseFloat(rotXSlider.value); c.rotY = parseFloat(rotYSlider.value); c.rotZ = parseFloat(rotZSlider.value);
+        c.posX = parseFloat(posXSlider.value); c.posY = parseFloat(posYSlider.value); c.posZ = parseFloat(posZSlider.value);
+    }
+
+    let cubes = [ readControls() ];
+    let currentCubeIndex = 0;
+
+    const cubeSelect = document.getElementById('cubeSelect');
+    function rebuildCubeSelect() {
+        cubeSelect.innerHTML = '';
+        cubes.forEach((c, i) => {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = 'Cube ' + (i + 1);
+            cubeSelect.appendChild(opt);
+        });
+        cubeSelect.value = currentCubeIndex;
+    }
+
+    // Save the panel's current edits into the active cube, then redraw everything.
+    function onControlChange() {
+        saveControlsToCube(cubes[currentCubeIndex]);
+        draw();
+    }
+
+    function pointInPolygon(x, y, poly) {
+        let inside = false;
+        for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+            const xi = poly[i].x, yi = poly[i].y, xj = poly[j].x, yj = poly[j].y;
+            const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+        }
+        return inside;
+    }
+
+    // Return the index of the front-most cube under a screen point, or -1.
+    function pickCube(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        const px = clientX - rect.left;
+        const py = clientY - rect.top;
+        const zoom = parseFloat(zoomSlider.value);
+        const focal = 600;
+        const cx = canvas.width / 2, cy = canvas.height / 2;
+
+        let best = -1, bestDepth = Infinity;
+        for (let ci = 0; ci < cubes.length; ci++) {
+            const { projectedVertices, transformedVertices } = projectCubeVertices(cubes[ci], cx, cy, zoom, focal);
+            for (let f of faces) {
+                const poly = f.v.map(i => projectedVertices[i]);
+                if (pointInPolygon(px, py, poly)) {
+                    let z = 0;
+                    for (let i of f.v) z += transformedVertices[i].z;
+                    z /= f.v.length;
+                    if (z < bestDepth) { bestDepth = z; best = ci; }
+                }
+            }
+        }
+        return best;
+    }
+
+    // Make the cube under the pointer the active one (if any).
+    function selectCubeAt(clientX, clientY) {
+        const idx = pickCube(clientX, clientY);
+        if (idx !== -1 && idx !== currentCubeIndex) {
+            saveControlsToCube(cubes[currentCubeIndex]);
+            currentCubeIndex = idx;
+            cubeSelect.value = idx;
+            loadCubeToControls(cubes[idx]);
+            draw();
+        }
+    }
+
     function resize() {
         canvas.width = canvas.parentElement.clientWidth;
         canvas.height = canvas.parentElement.clientHeight;
@@ -257,29 +384,23 @@
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Get values
-        const pitch = parseFloat(rotXSlider.value) * (Math.PI / 180);
-        const yaw = parseFloat(rotYSlider.value) * (Math.PI / 180);
-        const roll = parseFloat(rotZSlider.value) * (Math.PI / 180);
-        const pX = parseFloat(posXSlider.value), pY = parseFloat(posYSlider.value), pZ = parseFloat(posZSlider.value);
         const zoom = parseFloat(zoomSlider.value);
         const viewMode = viewModeSelect.value;
         const focal = 600; // Hardcoded static base lens so zoom handles all scaling
 
-        // Sync number inputs (skip the one currently being edited to avoid cursor jumps)
+        // Sync number inputs for the current cube (skip the one being edited to avoid cursor jumps)
         const active = document.activeElement;
         if (active !== valX) valX.value = rotXSlider.value;
         if (active !== valY) valY.value = rotYSlider.value;
         if (active !== valZ) valZ.value = rotZSlider.value;
-        if (active !== valPosX) valPosX.value = Math.round(pX);
-        if (active !== valPosY) valPosY.value = Math.round(pY);
-        if (active !== valPosZ) valPosZ.value = Math.round(pZ);
+        if (active !== valPosX) valPosX.value = Math.round(parseFloat(posXSlider.value));
+        if (active !== valPosY) valPosY.value = Math.round(parseFloat(posYSlider.value));
+        if (active !== valPosZ) valPosZ.value = Math.round(parseFloat(posZSlider.value));
         if (active !== valZoom) valZoom.value = Math.round(zoom * 100);
 
         const cx = canvas.width / 2, cy = canvas.height / 2;
-        const cubeSize = 100, cameraZ = 4;
 
-        // HORIZON LINE
+        // HORIZON LINE (shared by all cubes)
         ctx.beginPath();
         ctx.moveTo(0, cy);
         ctx.lineTo(canvas.width, cy);
@@ -291,6 +412,39 @@
         ctx.fillStyle = '#00ffff';
         ctx.font = '14px Arial';
         ctx.fillText("Horizon Line", 20, cy - 10);
+
+        // Draw every cube using its own stored state
+        for (let c of cubes) {
+            drawCube(c, cx, cy, zoom, viewMode, focal);
+        }
+    }
+
+    // Project a cube's 8 vertices to screen space (shared by drawing and hit-testing)
+    function projectCubeVertices(state, cx, cy, zoom, focal) {
+        const pitch = state.rotX * (Math.PI / 180);
+        const yaw = state.rotY * (Math.PI / 180);
+        const roll = state.rotZ * (Math.PI / 180);
+        const pX = state.posX, pY = state.posY, pZ = state.posZ;
+        const cubeSize = 100, cameraZ = 4;
+
+        const projectedVertices = [];
+        const transformedVertices = [];
+        for (let v of vertices) {
+            let rotated = rotate3D(v.x * cubeSize, v.y * cubeSize, v.z * cubeSize, pitch, yaw, roll);
+            let translated = { x: rotated.x + pX, y: rotated.y + pY, z: rotated.z + pZ + (cameraZ * cubeSize) };
+            transformedVertices.push(translated);
+            projectedVertices.push({
+                x: cx + (translated.x / translated.z) * focal * zoom,
+                y: cy - (translated.y / translated.z) * focal * zoom
+            });
+        }
+        return { projectedVertices, transformedVertices };
+    }
+
+    function drawCube(state, cx, cy, zoom, viewMode, focal) {
+        const pitch = state.rotX * (Math.PI / 180);
+        const yaw = state.rotY * (Math.PI / 180);
+        const roll = state.rotZ * (Math.PI / 180);
 
         // VPs - Scaled by Zoom
         const axisX = rotate3D(1, 0, 0, pitch, yaw, roll);
@@ -306,19 +460,7 @@
         const vpNames=['X','Y','Z']
 
         // Vertices - Scaled by Zoom
-        const projectedVertices = [];
-        const transformedVertices = [];
-        
-        for (let v of vertices) {
-            let rotated = rotate3D(v.x * cubeSize, v.y * cubeSize, v.z * cubeSize, pitch, yaw, roll);
-            let translated = { x: rotated.x + pX, y: rotated.y + pY, z: rotated.z + pZ + (cameraZ * cubeSize) };
-            transformedVertices.push(translated);
-            
-            projectedVertices.push({
-                x: cx + (translated.x / translated.z) * focal * zoom,
-                y: cy - (translated.y / translated.z) * focal * zoom
-            });
-        }
+        const { projectedVertices, transformedVertices } = projectCubeVertices(state, cx, cy, zoom, focal);
 
         // Back-face Culling
         let visibleFaces = [];
@@ -424,10 +566,11 @@
 
         posXSlider.value = parseFloat(posXSlider.value) + moveX3D;
         posYSlider.value = parseFloat(posYSlider.value) + moveY3D;
-        draw();
+        onControlChange();
     }
 
     canvas.addEventListener('mousedown', (e) => {
+        selectCubeAt(e.clientX, e.clientY);
         startDrag(e.clientX, e.clientY);
     });
 
@@ -442,6 +585,7 @@
 
     canvas.addEventListener('touchstart', (e) => {
         if (e.touches.length === 1) {
+            selectCubeAt(e.touches[0].clientX, e.touches[0].clientY);
             startDrag(e.touches[0].clientX, e.touches[0].clientY);
         } else if (e.touches.length === 2) {
             isDragging = false;
@@ -492,23 +636,38 @@
         draw();
     });
 
-    // Attach events
-    [rotXSlider, rotYSlider, rotZSlider, posXSlider, posYSlider, posZSlider, zoomSlider].forEach(slider => {
-        slider.addEventListener('input', draw);
+    // Attach events. Per-cube controls write into the active cube; zoom is global.
+    [rotXSlider, rotYSlider, rotZSlider, posXSlider, posYSlider, posZSlider].forEach(slider => {
+        slider.addEventListener('input', onControlChange);
     });
+    zoomSlider.addEventListener('input', draw);
     viewModeSelect.addEventListener('change', draw);
 
     // Number inputs drive their sliders (zoom input is in percent)
     const numberInputPairs = [
-        [valX, rotXSlider, 1], [valY, rotYSlider, 1], [valZ, rotZSlider, 1],
-        [valPosX, posXSlider, 1], [valPosY, posYSlider, 1], [valPosZ, posZSlider, 1],
-        [valZoom, zoomSlider, 0.01]
+        [valX, rotXSlider, 1, true], [valY, rotYSlider, 1, true], [valZ, rotZSlider, 1, true],
+        [valPosX, posXSlider, 1, true], [valPosY, posYSlider, 1, true], [valPosZ, posZSlider, 1, true],
+        [valZoom, zoomSlider, 0.01, false]
     ];
-    numberInputPairs.forEach(([input, slider, factor]) => {
+    numberInputPairs.forEach(([input, slider, factor, perCube]) => {
         input.addEventListener('input', () => {
             if (input.value === '' || input.value === '-') return;
             slider.value = parseFloat(input.value) * factor;
-            draw();
+            if (perCube) onControlChange(); else draw();
+        });
+    });
+
+    // Reset buttons restore each control to its default value
+    const resetMap = {};
+    numberInputPairs.forEach(([input, slider, factor, perCube]) => {
+        resetMap[input.id] = { slider, perCube };
+    });
+    document.querySelectorAll('.reset-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const entry = resetMap[btn.dataset.for];
+            if (!entry) return;
+            entry.slider.value = entry.slider.defaultValue;
+            if (entry.perCube) onControlChange(); else draw();
         });
     });
 
@@ -519,7 +678,36 @@
         sidebar.classList.toggle('hidden');
     });
 
+    // --- CUBE MANAGEMENT ---
+    cubeSelect.addEventListener('change', () => {
+        currentCubeIndex = parseInt(cubeSelect.value, 10);
+        loadCubeToControls(cubes[currentCubeIndex]);
+        draw();
+    });
+
+    document.getElementById('addCube').addEventListener('click', () => {
+        saveControlsToCube(cubes[currentCubeIndex]);
+        // Copy the current cube and offset it so the new one is visible
+        const base = cubes[currentCubeIndex];
+        const newCube = { ...base, posX: base.posX + 250 };
+        cubes.push(newCube);
+        currentCubeIndex = cubes.length - 1;
+        rebuildCubeSelect();
+        loadCubeToControls(newCube);
+        draw();
+    });
+
+    document.getElementById('deleteCube').addEventListener('click', () => {
+        if (cubes.length <= 1) return; // always keep at least one cube
+        cubes.splice(currentCubeIndex, 1);
+        if (currentCubeIndex >= cubes.length) currentCubeIndex = cubes.length - 1;
+        rebuildCubeSelect();
+        loadCubeToControls(cubes[currentCubeIndex]);
+        draw();
+    });
+
     // Initial draw
+    rebuildCubeSelect();
     resize();
 </script>
 
