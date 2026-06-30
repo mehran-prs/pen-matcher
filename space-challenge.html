@@ -1,0 +1,29 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+    body{background:#111;color:#eee;font-family:sans-serif;text-align:center}canvas{background:#181818}#ui{margin:10px}select,label,button{margin:0 6px}
+</style></head><body><div id=ui>
+    <select id=s></select>
+    <label><input type=checkbox id=f> Filled</label>
+    <button onclick="loadShape()">Load</button>
+    <button onclick="spin=!spin">Toggle Spin</button>
+</div><canvas id=c width=800 height=600></canvas>
+<script>
+    const defs={
+        Cube:{v:[[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]],e:[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]],f:[[0,1,2,3],[4,5,6,7],[0,1,5,4],[2,3,7,6],[1,2,6,5],[0,3,7,4]]},
+        Tetrahedron:{v:[[1,1,1],[-1,-1,1],[-1,1,-1],[1,-1,-1]],e:[[0,1],[0,2],[0,3],[1,2],[2,3],[3,1]],f:[[0,1,2],[0,1,3],[0,2,3],[1,2,3]]},
+        Octahedron:{v:[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]],e:[[0,2],[2,1],[1,3],[3,0],[0,4],[2,4],[1,4],[3,4],[0,5],[2,5],[1,5],[3,5]],f:[[0,2,4],[2,1,4],[1,3,4],[3,0,4],[0,2,5],[2,1,5],[1,3,5],[3,0,5]]}
+    };
+    for(let k in defs){s.innerHTML+=`<option>${k}</option>`}
+    let shape,spin=true;
+    function loadShape(){shape=JSON.parse(JSON.stringify(defs[s.value]));shape.rx=.6;shape.ry=.8;shape.rz=.2;shape.col=`hsl(${Math.random()*360},80%,60%)`}
+    loadShape();
+    const ctx=c.getContext('2d');
+    function rot(p){let[x,y,z]=p,c=Math.cos,S=Math.sin;[x,z]=[x*c(shape.ry)-z*S(shape.ry),x*S(shape.ry)+z*c(shape.ry)];[y,z]=[y*c(shape.rx)-z*S(shape.rx),y*S(shape.rx)+z*c(shape.rx)];[x,y]=[x*c(shape.rz)-y*S(shape.rz),x*S(shape.rz)+y*c(shape.rz)];return[x,y,z]}
+    function proj(p){let r=rot(p),f=260/(r[2]+4);return{x:400+r[0]*f*1.5,y:300+r[1]*f*1.5,z:r[2]}}
+    function frame(){if(spin){shape.rx+=.005;shape.ry+=.01}ctx.clearRect(0,0,800,600);
+        let pts=shape.v.map(proj);
+        if(f.checked&&shape.f){let faces=shape.f.map(face=>({face,z:face.reduce((a,i)=>a+pts[i].z,0)/face.length})).sort((a,b)=>a.z-b.z);
+            for(let F of faces){ctx.beginPath();ctx.moveTo(pts[F.face[0]].x,pts[F.face[0]].y);for(let i=1;i<F.face.length;i++)ctx.lineTo(pts[F.face[i]].x,pts[F.face[i]].y);ctx.closePath();ctx.fillStyle=shape.col;ctx.globalAlpha=.6;ctx.fill();ctx.globalAlpha=1;ctx.strokeStyle="#fff";ctx.stroke();}}
+        else{ctx.strokeStyle=shape.col;for(let e of shape.e){ctx.beginPath();ctx.moveTo(pts[e[0]].x,pts[e[0]].y);ctx.lineTo(pts[e[1]].x,pts[e[1]].y);ctx.stroke();}}
+        requestAnimationFrame(frame)}
+    frame();
+</script></body></html>

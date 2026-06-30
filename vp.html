@@ -25,7 +25,9 @@
             backdrop-filter: blur(3px);
             -webkit-backdrop-filter: blur(12px);
             padding: 20px;
-            padding-top: 70px;
+            margin-top: 60px;
+            border-radius:12px;
+            margin-left: 8px;
             box-shadow: 2px 0 15px rgba(0,0,0,0.5);
             z-index: 10;
             overflow-y: auto;
@@ -33,6 +35,7 @@
         }
         #sidebar.hidden {
             transform: translateX(-100%);
+            margin-left: 0;
         }
         #topbar {
             position: fixed;
@@ -183,6 +186,7 @@
         <select id="cubeSelect" class="topbar-control" title="Current cube"></select>
         <button id="addCube" class="topbar-control topbar-btn" title="Add cube">+</button>
         <button id="deleteCube" class="topbar-control topbar-btn" title="Delete current cube">🗑</button>
+        <button id="randomBox" class="topbar-control topbar-btn" title="Generate a random box">🎲</button>
         <button id="exportScene" class="topbar-control topbar-btn" title="Export to JSON file">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
         </button>
@@ -199,6 +203,9 @@
                 <option value="solid">Solid Object (Real World)</option>
                 <option value="wireframe">Wireframe (See-through)</option>
             </select>
+        </div>
+        <div class="control-group">
+            <label style="cursor:pointer;"><span>Show Vanishing Points</span> <input type="checkbox" id="showVPs" checked style="width:auto;cursor:pointer;"></label>
         </div>
 
         <h2>Camera Setup</h2>
@@ -259,6 +266,7 @@
 
     // UI Elements
     const viewModeSelect = document.getElementById('viewMode');
+    const showVPsCheckbox = document.getElementById('showVPs');
     const rotXSlider = document.getElementById('rotX'), rotYSlider = document.getElementById('rotY'), rotZSlider = document.getElementById('rotZ');
     const posXSlider = document.getElementById('posX'), posYSlider = document.getElementById('posY'), posZSlider = document.getElementById('posZ');
     const zoomSlider = document.getElementById('zoomOut');
@@ -428,8 +436,9 @@
         ctx.fillText("Horizon Line", 20, cy - 10);
 
         // Draw every cube using its own stored state
+        const showVPs = showVPsCheckbox.checked;
         for (let c of cubes) {
-            drawCube(c, cx, cy, zoom, viewMode, focal);
+            drawCube(c, cx, cy, zoom, viewMode, focal, showVPs);
         }
     }
 
@@ -460,7 +469,7 @@
         return { projectedVertices, transformedVertices };
     }
 
-    function drawCube(state, cx, cy, zoom, viewMode, focal) {
+    function drawCube(state, cx, cy, zoom, viewMode, focal, showVPs = true) {
         const pitch = state.rotX * (Math.PI / 180);
         const yaw = state.rotY * (Math.PI / 180);
         const roll = state.rotZ * (Math.PI / 180);
@@ -513,13 +522,15 @@
         }
 
         // Draw Guide lines
-        ctx.lineWidth = 1;
-        for (let e of visibleEdgesList) {
-            let p1 = projectedVertices[e[0]];
-            let vp = vps[e[2]];
-            if (vp.valid) {
-                ctx.beginPath(); ctx.moveTo(vp.x, vp.y); ctx.lineTo(p1.x, p1.y);
-                ctx.strokeStyle = vp.color + '44'; ctx.stroke();
+        if (showVPs) {
+            ctx.lineWidth = 1;
+            for (let e of visibleEdgesList) {
+                let p1 = projectedVertices[e[0]];
+                let vp = vps[e[2]];
+                if (vp.valid) {
+                    ctx.beginPath(); ctx.moveTo(vp.x, vp.y); ctx.lineTo(p1.x, p1.y);
+                    ctx.strokeStyle = vp.color + '44'; ctx.stroke();
+                }
             }
         }
 
@@ -545,13 +556,15 @@
         }
 
         // Draw VPs
-        for (let i = 0; i < vps.length; i++) {
-            let vp = vps[i];
-            if (vp.valid) {
-                ctx.beginPath(); ctx.arc(vp.x, vp.y, 6, 0, Math.PI * 2);
-                ctx.fillStyle = vp.color; ctx.fill();
-                ctx.fillStyle = '#fff'; ctx.font = 'bold 14px Arial';
-                ctx.fillText(`${vpNames[i]}-VP`, vp.x + 10, vp.y - 10);
+        if (showVPs) {
+            for (let i = 0; i < vps.length; i++) {
+                let vp = vps[i];
+                if (vp.valid) {
+                    ctx.beginPath(); ctx.arc(vp.x, vp.y, 6, 0, Math.PI * 2);
+                    ctx.fillStyle = vp.color; ctx.fill();
+                    ctx.fillStyle = '#fff'; ctx.font = 'bold 14px Arial';
+                    ctx.fillText(`${vpNames[i]}-VP`, vp.x + 10, vp.y - 10);
+                }
             }
         }
     }
@@ -662,6 +675,7 @@
     zoomSlider.addEventListener('input', draw);
     sizeSlider.addEventListener('input', draw);
     viewModeSelect.addEventListener('change', draw);
+    showVPsCheckbox.addEventListener('change', draw);
 
     // Number inputs drive their sliders (zoom input is in percent)
     const numberInputPairs = [
@@ -722,6 +736,25 @@
         if (cubes.length <= 1) return; // always keep at least one cube
         cubes.splice(currentCubeIndex, 1);
         if (currentCubeIndex >= cubes.length) currentCubeIndex = cubes.length - 1;
+        rebuildCubeSelect();
+        loadCubeToControls(cubes[currentCubeIndex]);
+        draw();
+    });
+
+    // --- RANDOM BOX ---
+    // Generates a single random box. Behaves like an import: replaces all existing cubes.
+    document.getElementById('randomBox').addEventListener('click', () => {
+        const rand = (min, max) => Math.random() * (max - min) + min;
+        const newCube = {
+            rotX: Math.round(rand(-60, 60)),
+            rotY: Math.round(rand(-60, 60)),
+            rotZ: Math.round(rand(-30, 30)),
+            posX: Math.round(rand(-600, 600)),
+            posY: Math.round(rand(-400, 400)),
+            posZ: Math.round(rand(-200, 1200))
+        };
+        cubes = [newCube];
+        currentCubeIndex = 0;
         rebuildCubeSelect();
         loadCubeToControls(cubes[currentCubeIndex]);
         draw();
