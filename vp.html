@@ -746,12 +746,12 @@
     document.getElementById('randomBox').addEventListener('click', () => {
         const rand = (min, max) => Math.random() * (max - min) + min;
         const newCube = {
-            rotX: Math.round(rand(-60, 60)),
-            rotY: Math.round(rand(-60, 60)),
-            rotZ: Math.round(rand(-30, 30)),
+            rotX: 0,
+            rotY: Math.random() < 0.5 ? Math.round(rand(-60, 60)) : 0,
+            rotZ: 0,
             posX: Math.round(rand(-600, 600)),
             posY: Math.round(rand(-400, 400)),
-            posZ: Math.round(rand(-200, 1200))
+            posZ: 0
         };
         cubes = [newCube];
         currentCubeIndex = 0;
